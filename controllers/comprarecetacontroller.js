@@ -3,7 +3,11 @@ const CompraReceta = require('../models/comprarecetamodel');
 const CompraRecetaController = {
   async get(req, res) {
     try {
-      const compras = await CompraReceta.findAll({ where: { receta_id: req.params.receta_id } });
+      let query = {};
+      if (req.params.receta_id) {
+        query = { where: { receta_id: req.params.receta_id } };
+      }
+      const compras = await CompraReceta.findAll(query);
       res.send(compras);
     } catch (error) {
       res.status(500).send({ message: 'Error retrieving compras', error });

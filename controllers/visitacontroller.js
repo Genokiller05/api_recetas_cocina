@@ -1,6 +1,19 @@
 const Visita = require('../models/visitamodel');
 
 const VisitaController = {
+  async get(req, res) {
+    try {
+      let query = {};
+      if (req.params.receta_id) {
+        query = { where: { receta_id: req.params.receta_id } };
+      }
+      const visitas = await Visita.findAll(query);
+      res.send(visitas);
+    } catch (error) {
+      res.status(500).send({ message: 'Error retrieving visitas', error });
+    }
+  },
+
   async create(req, res) {
     try {
       const visita = await Visita.create({ 

@@ -1,0 +1,114 @@
+-- ==========================================
+-- INSERCIONES DE DATOS DE EJEMPLO
+-- ==========================================
+
+-- 1. Usuarios
+INSERT INTO usuarios (nombre, username, email, hash_password, foto_url, bio) VALUES
+('Juan Pérez', 'juanp', 'juan.perez@example.com',
+  '$2a$10$abcdefghijklmnopqrstuvw.xyz1234567890', 'https://example.com/foto_juan.jpg',
+  'Amante de la cocina tradicional.'),
+('María García', 'mariag', 'maria.garcia@example.com',
+  '$2a$10$abcdefghijklmnopqrstuvw.xyz1234567890', 'https://example.com/foto_maria.jpg',
+  'Exploradora de sabores exóticos.'),
+('Carlos Ruiz', 'carlosr', 'carlos.ruiz@example.com',
+  '$2a$10$abcdefghijklmnopqrstuvw.xyz1234567890', NULL, 'Chef aficionado y crítico gastronómico.');
+
+-- 2. Ingredientes
+INSERT INTO ingredientes (nombre, unidad_base) VALUES
+('Harina de trigo', 'gramos'),
+('Huevos', 'unidades'),
+('Azúcar', 'gramos'),
+('Leche', 'ml'),
+('Mantequilla', 'gramos'),
+('Sal', 'gramos'),
+('Pollo', 'gramos'),
+('Arroz', 'gramos'),
+('Tomate', 'unidades'),
+('Cebolla', 'unidades'),
+('Ajo', 'dientes'),
+('Aceite de oliva', 'ml');
+
+-- 3. Categorías
+INSERT INTO categorias (nombre, slug, parent_id) VALUES
+('Platos Fuertes', 'platos-fuertes', NULL),
+('Postres', 'postres', NULL),
+('Desayunos', 'desayunos', NULL),
+('Comida Mexicana', 'comida-mexicana', 1),
+('Comida Italiana', 'comida-italiana', 1),
+('Pasteles', 'pasteles', 2),
+('Galletas', 'galletas', 2);
+
+-- 4. Tags
+INSERT INTO tags (nombre, slug) VALUES
+('Vegetariano', 'vegetariano'),
+('Rápido', 'rapido'),
+('Saludable', 'saludable'),
+('Picante', 'picante'),
+('Sin Gluten', 'sin-gluten');
+
+-- 5. Recetas (depende de Usuarios)
+-- Asumiendo que los IDs de usuario son 1, 2, 3
+INSERT INTO recetas (autor_id, titulo, slug, descripcion, tiempo_preparacion_min,
+  porciones, visibilidad, precio_mxn, publicado) VALUES
+(1, 'Pastel de Chocolate Clásico', 'pastel-chocolate-clasico', 'Un delicioso pastel de chocolate para cualquier ocasión.', 60, 8, 'publica', 0.00, 1),
+(2, 'Pollo al Curry Tailandés', 'pollo-curry-tailandes', 'Receta auténtica de pollo al curry con leche de coco.', 45, 4, 'publica', 15.00, 1),
+(1, 'Sopa de Lentejas Casera', 'sopa-lentejas-casera', 'Sopa nutritiva y fácil de hacer.', 50, 6, 'publica', 0.00, 1);
+
+-- 6. Pasos (depende de Recetas)
+-- Asumiendo que los IDs de receta son 1, 2, 3
+INSERT INTO pasos (receta_id, numero_orden, instruccion, duracion_min) VALUES
+(1, 1, 'Precalentar el horno a 180°C.', 5),
+(1, 2, 'Mezclar harina, azúcar, cacao, bicarbonato, polvo de hornear y sal en un bol grande.', NULL),
+(1, 3, 'Añadir huevos, leche, aceite y vainilla; batir hasta integrar.', NULL),
+(1, 4, 'Verter la mezcla en un molde engrasado y hornear por 30-35 minutos.', 35),
+(2, 1, 'Cortar el pollo en trozos y saltear en una sartén grande.', 10),
+(2, 2, 'Añadir pasta de curry y cocinar por 2 minutos.', 2),
+(2, 3, 'Incorporar leche de coco y verduras, cocinar a fuego lento hasta que el pollo esté cocido.', 25);
+
+-- 7. Recetas_Ingredientes (depende de Recetas e Ingredientes)
+-- Asumiendo IDs de receta 1, 2 y de ingrediente 1-12
+INSERT INTO recetas_ingredientes (receta_id, ingrediente_id, cantidad, unidad) VALUES
+(1, 1, 200, 'gramos'), -- Harina para Pastel de Chocolate
+(1, 2, 3, 'unidades'), -- Huevos para Pastel de Chocolate
+(1, 3, 250, 'gramos'), -- Azúcar para Pastel de Chocolate
+(2, 7, 500, 'gramos'), -- Pollo para Pollo al Curry
+(2, 4, 400, 'ml');     -- Leche para Pollo al Curry
+
+-- 8. Recetas_Categorias (depende de Recetas y Categorías)
+-- Asumiendo IDs de receta 1, 2, 3 y de categoría 1-7
+INSERT INTO recetas_categorias (receta_id, categoria_id) VALUES
+(1, 2), -- Pastel de Chocolate -> Postres
+(1, 6), -- Pastel de Chocolate -> Pasteles
+(2, 1), -- Pollo al Curry -> Platos Fuertes
+(3, 1); -- Sopa de Lentejas -> Platos Fuertes
+
+-- 9. Recetas_Tags (depende de Recetas y Tags)
+-- Asumiendo IDs de receta 1, 2, 3 y de tag 1-5
+INSERT INTO recetas_tags (receta_id, tag_id) VALUES
+(1, 2), -- Pastel de Chocolate -> Rápido (ejemplo)
+(2, 4), -- Pollo al Curry -> Picante
+(3, 1), -- Sopa de Lentejas -> Vegetariano
+(3, 3); -- Sopa de Lentejas -> Saludable
+
+-- 10. Colaboradores_Receta (depende de Recetas y Usuarios)
+-- Asumiendo IDs de receta 1, 2 y de usuario 1, 2, 3
+INSERT INTO colaboradores_receta (receta_id, usuario_id, rol) VALUES
+(1, 3, 'editor'); -- Carlos Ruiz colabora en Pastel de Chocolate
+
+-- 11. Visitas (depende de Recetas y Usuarios)
+INSERT INTO visitas (receta_id, usuario_id, ip_hash, user_agent) VALUES
+(1, 1, 'hash_ip_1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'),
+(1, NULL, 'hash_ip_2', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'),
+(2, 2, 'hash_ip_3', 'Mozilla/5.0 (Linux; Android 10)');
+
+-- 12. Valoraciones (depende de Recetas y Usuarios)
+INSERT INTO valoraciones (receta_id, usuario_id, rating, comentario) VALUES
+(1, 1, 5, '¡Delicioso! Me encantó este pastel.'),
+(1, 2, 4, 'Muy bueno, aunque un poco dulce para mi gusto.'),
+(2, 1, 5, 'El mejor curry que he probado, fácil de seguir.');
+
+-- 13. Compras_Receta (depende de Recetas y Usuarios)
+-- Asumiendo que la receta 2 tiene precio > 0
+INSERT INTO compras_receta (receta_id, comprador_id, amount_mxn, status, referencia_pago) VALUES
+(2, 1, 15.00, 'pagado', 'REF-CURRY-001'),
+(2, 3, 15.00, 'pendiente', 'REF-CURRY-002');

@@ -1,29 +1,47 @@
-
 const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const db = require('./db'); // Importa la conexión a la base de datos
+
 const app = express();
-const port = 3000;
-const sequelize = require('./db');
-const userRoutes = require('./routes/usuarioroutes');
+const PORT = process.env.PORT || 3000;
+
+// Middlewares
+app.use(cors());
+app.use(bodyParser.json());
+
+// Rutas
+const usuarioRoutes = require('./routes/usuarioroutes');
+const categoriaRoutes = require('./routes/categoriaroutes');
+const ingredienteRoutes = require('./routes/ingredienteroutes');
+const pasoRoutes = require('./routes/pasoroutes');
 const recetaRoutes = require('./routes/recetaroutes');
-const ingredienteRoutes = require('./routes/ingredienteroutes.js');
-const categoriaRoutes = require('./routes/categoriaroutes.js');
-const tagRoutes = require('./routes/tagroutes.js');
+const tagRoutes = require('./routes/tagroutes');
+const valoracionRoutes = require('./routes/valoracionroutes');
+const visitaRoutes = require('./routes/visitaroutes');
+const compraRecetaRoutes = require('./routes/comprarecetaroutes');
 
-app.use(express.json());
+app.use('/usuarios', usuarioRoutes);
+app.use('/categorias', categoriaRoutes);
+app.use('/ingredientes', ingredienteRoutes);
+app.use('/pasos', pasoRoutes);
+app.use('/recetas', recetaRoutes);
+app.use('/tags', tagRoutes);
+app.use('/valoraciones', valoracionRoutes);
+app.use('/visitas', visitaRoutes);
+app.use('/compras-recetas', compraRecetaRoutes);
 
-app.use('/api', userRoutes);
-app.use('/api', recetaRoutes);
-app.use('/api', ingredienteRoutes);
-app.use('/api', categoriaRoutes);
-app.use('/api', tagRoutes);
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-  sequelize.authenticate()
+// Conexión a la base de datos
+db.authenticate()
     .then(() => {
-      console.log('Connection has been established successfully.');
+        console.log('Conexión a la base de datos MySQL establecida correctamente.');
+        require('./models/associations'); // Cargar asociaciones de modelos
     })
     .catch(err => {
-      console.error('Unable to connect to the database:', err);
+        console.error('No se pudo conectar a la base de datos:', err);
     });
+
+// Iniciar el servidor
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
 });

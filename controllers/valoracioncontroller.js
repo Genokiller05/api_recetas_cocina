@@ -3,7 +3,11 @@ const Valoracion = require('../models/valoracionmodel');
 const ValoracionController = {
   async get(req, res) {
     try {
-      const valoraciones = await Valoracion.findAll({ where: { receta_id: req.params.receta_id } });
+      let query = {};
+      if (req.params.receta_id) {
+        query = { where: { receta_id: req.params.receta_id } };
+      }
+      const valoraciones = await Valoracion.findAll(query);
       res.send(valoraciones);
     } catch (error) {
       res.status(500).send({ message: 'Error retrieving valoraciones', error });

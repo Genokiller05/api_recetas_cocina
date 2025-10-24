@@ -36,21 +36,4 @@ const Usuario = sequelize.define('Usuario', {
   timestamps: false
 });
 
-const Receta = require('./recetamodel');
-const ColaboradoresReceta = require('./colaboradoresrecetamodel');
-
-Usuario.belongsToMany(Receta, { through: ColaboradoresReceta, foreignKey: 'usuario_id' });
-
-const Visita = require('./visitamodel');
-
-Usuario.hasMany(Visita, { foreignKey: 'usuario_id' });
-
-const Valoracion = require('./valoracionmodel');
-
-Usuario.hasMany(Valoracion, { foreignKey: 'usuario_id' });
-
-const CompraReceta = require('./comprarecetamodel');
-
-Usuario.hasMany(CompraReceta, { foreignKey: 'comprador_id' });
-
 module.exports = Usuario;

@@ -3,11 +3,11 @@ const router = express.Router();
 const RecetaController = require('../controllers/recetacontroller');
 const { validatorRecetaCreate, validatorRecetaUpdate } = require('../validators/recetavalidator');
 
-router.get('/recetas', RecetaController.get);
-router.get('/recetas/:id', RecetaController.getById);
-router.post('/recetas', validatorRecetaCreate, RecetaController.create);
-router.put('/recetas/:id', validatorRecetaUpdate, RecetaController.update);
-router.delete('/recetas/:id', RecetaController.destroy);
+router.get('/', RecetaController.get);
+router.get('/:id', RecetaController.getById);
+router.post('/', validatorRecetaCreate, RecetaController.create);
+router.put('/:id', validatorRecetaUpdate, RecetaController.update);
+router.delete('/:id', RecetaController.destroy);
 
 const pasoRoutes = require('./pasoroutes');
 

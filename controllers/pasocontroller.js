@@ -3,7 +3,11 @@ const Paso = require('../models/pasomodel');
 const PasoController = {
   async get(req, res) {
     try {
-      const pasos = await Paso.findAll({ where: { receta_id: req.params.receta_id } });
+      let query = {};
+      if (req.params.receta_id) {
+        query = { where: { receta_id: req.params.receta_id } };
+      }
+      const pasos = await Paso.findAll(query);
       res.send(pasos);
     } catch (error) {
       res.status(500).send({ message: 'Error retrieving pasos', error });

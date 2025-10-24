@@ -1,0 +1,362 @@
+/* ============================================================
+  PROYECTO: API de Recetas (XAMPP MySQL/MariaDB)
+  Motor: InnoDB, Charset utf8mb4
+  NOTAS:
+  - Recetas públicas por defecto; algunas pueden tener precio (> 0).
+  - Un usuario es propietario (autor) de la receta y puede invitar colaboradores.
+  - Valoraciones: 1..5 estrellas, 1 por usuario por receta.
+  - Visitas: se registran (usuario opcional) para métricas.
+  - Categorías y tags: muchos-a-muchos; categorías soportan jerarquía.
+============================================================ */
+
+-- (Opcional) Crea la base de datos y selecciónala
+CREATE DATABASE IF NOT EXISTS recetas_db
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+USE recetas_db;
+
+-- Recomendado para consistencia
+SET NAMES utf8mb4;
+SET time_zone = '+00:00';
+
+-- ==========================================
+-- TABLA: usuarios
+-- ==========================================
+CREATE TABLE IF NOT EXISTS usuarios (
+  id              BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  nombre          VARCHAR(100)        NOT NULL,
+  username        VARCHAR(50)         NOT NULL,
+  email           VARCHAR(255)        NOT NULL,
+  hash_password   CHAR(60)            NOT NULL, -- BCrypt/Argon2 (ajusta si usas otra)
+  foto_url        VARCHAR(500)        NULL,
+  bio             VARCHAR(280)        NULL,
+  creado_en       DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en  DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_usuarios_email (email),
+  UNIQUE KEY uq_usuarios_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- TABLA: recetas
+-- ==========================================
+CREATE TABLE IF NOT EXISTS recetas (
+  id               BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  autor_id         BIGINT UNSIGNED   NOT NULL,
+  titulo           VARCHAR(200)      NOT NULL,
+  slug             VARCHAR(220)      NOT NULL,
+  descripcion      TEXT              NULL,
+  tiempo_preparacion_min SMALLINT UNSIGNED NULL,
+  porciones        SMALLINT UNSIGNED NULL,
+  visibilidad      ENUM('publica','privada','no_listada') NOT NULL DEFAULT 'publica',
+  precio_mxn       DECIMAL(10,2)     NOT NULL DEFAULT 0.00,
+  publicado        TINYINT(1)        NOT NULL DEFAULT 1,
+  creado_en        DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en   DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_recetas_slug (slug),
+  KEY idx_recetas_autor (autor_id),
+  KEY idx_recetas_vis (visibilidad, publicado),
+  KEY idx_recetas_precio (precio_mxn),
+  FULLTEXT KEY ft_recetas (titulo, descripcion),
+  CONSTRAINT fk_recetas_autor
+    FOREIGN KEY (autor_id) REFERENCES usuarios(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- TABLA: colaboradores_receta (N:1 con receta)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS colaboradores_receta (
+  receta_id      BIGINT UNSIGNED NOT NULL,
+  usuario_id     BIGINT UNSIGNED NOT NULL,
+  rol            ENUM('editor')  NOT NULL DEFAULT 'editor',
+  invitado_en    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  aceptado_en    DATETIME        NULL,
+  PRIMARY KEY (receta_id, usuario_id),
+  KEY idx_colab_user (usuario_id),
+  CONSTRAINT fk_colab_receta
+    FOREIGN KEY (receta_id) REFERENCES recetas(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_colab_usuario
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- TABLA: ingredientes (catálogo)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS ingredientes (
+  id             BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  nombre         VARCHAR(120)    NOT NULL,
+  unidad_base    VARCHAR(30)     NULL,
+  UNIQUE KEY uq_ingredientes_nombre (nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- TABLA: recetas_ingredientes (N:M)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS recetas_ingredientes (
+  receta_id      BIGINT UNSIGNED NOT NULL,
+  ingrediente_id BIGINT UNSIGNED NOT NULL,
+  cantidad       DECIMAL(10,3)   NULL,
+  unidad         VARCHAR(30)     NULL,
+  step_hint      SMALLINT UNSIGNED NULL,
+  notas          VARCHAR(200)    NULL,
+  PRIMARY KEY (receta_id, ingrediente_id),
+  KEY idx_ri_ing (ingrediente_id),
+  CONSTRAINT fk_ri_receta
+    FOREIGN KEY (receta_id) REFERENCES recetas(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_ri_ingrediente
+    FOREIGN KEY (ingrediente_id) REFERENCES ingredientes(id)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- TABLA: pasos (1:N con receta)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS pasos (
+  id            BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  receta_id     BIGINT UNSIGNED NOT NULL,
+  numero_orden  SMALLINT UNSIGNED NOT NULL,
+  instruccion   TEXT             NOT NULL,
+  duracion_min  SMALLINT UNSIGNED NULL,
+  creado_en     DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_pasos_receta_orden (receta_id, numero_orden),
+  KEY idx_pasos_receta (receta_id),
+  CONSTRAINT fk_pasos_receta
+    FOREIGN KEY (receta_id) REFERENCES recetas(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- TABLAS: categorias y puente (N:M)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS categorias (
+  id           BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  nombre       VARCHAR(100)   NOT NULL,
+  slug         VARCHAR(120)   NOT NULL,
+  parent_id    BIGINT UNSIGNED NULL,
+  UNIQUE KEY uq_categorias_slug (slug),
+  UNIQUE KEY uq_categorias_nombre (nombre),
+  KEY idx_cat_parent (parent_id),
+  CONSTRAINT fk_cat_parent
+    FOREIGN KEY (parent_id) REFERENCES categorias(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS recetas_categorias (
+  receta_id     BIGINT UNSIGNED NOT NULL,
+  categoria_id  BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (receta_id, categoria_id),
+  KEY idx_rc_cat (categoria_id),
+  CONSTRAINT fk_rc_receta
+    FOREIGN KEY (receta_id) REFERENCES recetas(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_rc_categoria
+    FOREIGN KEY (categoria_id) REFERENCES categorias(id)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- TABLAS: tags y puente (N:M)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS tags (
+  id      BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  nombre  VARCHAR(60)  NOT NULL,
+  slug    VARCHAR(80)  NOT NULL,
+  UNIQUE KEY uq_tags_slug (slug),
+  UNIQUE KEY uq_tags_nombre (nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS recetas_tags (
+  receta_id  BIGINT UNSIGNED NOT NULL,
+  tag_id     BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (receta_id, tag_id),
+  KEY idx_rt_tag (tag_id),
+  CONSTRAINT fk_rt_receta
+    FOREIGN KEY (receta_id) REFERENCES recetas(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_rt_tag
+    FOREIGN KEY (tag_id) REFERENCES tags(id)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- TABLA: visitas (analytics)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS visitas (
+  id           BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  receta_id    BIGINT UNSIGNED NOT NULL,
+  usuario_id   BIGINT UNSIGNED NULL,
+  ip_hash      CHAR(64)        NULL,
+  user_agent   VARCHAR(255)    NULL,
+  visitado_en  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_visitas_receta (receta_id),
+  KEY idx_visitas_usuario (usuario_id),
+  CONSTRAINT fk_visitas_receta
+    FOREIGN KEY (receta_id) REFERENCES recetas(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_visitas_usuario
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- TABLA: valoraciones (1 por usuario por receta)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS valoraciones (
+  id             BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  receta_id      BIGINT UNSIGNED NOT NULL,
+  usuario_id     BIGINT UNSIGNED NOT NULL,
+  rating         TINYINT UNSIGNED NOT NULL, -- 1..5 (validado por triggers)
+  comentario     VARCHAR(500)     NULL,
+  creado_en      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_valoracion (receta_id, usuario_id),
+  KEY idx_val_receta (receta_id),
+  KEY idx_val_usuario (usuario_id),
+  CONSTRAINT fk_val_receta
+    FOREIGN KEY (receta_id) REFERENCES recetas(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_val_usuario
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- TABLA: compras_receta
+-- ==========================================
+CREATE TABLE IF NOT EXISTS compras_receta (
+  id               BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  receta_id        BIGINT UNSIGNED NOT NULL,
+  comprador_id     BIGINT UNSIGNED NOT NULL,
+  amount_mxn       DECIMAL(10,2)   NOT NULL, -- precio en el momento de compra
+  status           ENUM('pendiente','pagado','fallido','reembolsado') NOT NULL DEFAULT 'pendiente',
+  referencia_pago  VARCHAR(120)    NULL,
+  creado_en        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_compra_unica (receta_id, comprador_id),
+  KEY idx_cr_receta (receta_id),
+  KEY idx_cr_comprador (comprador_id),
+  CONSTRAINT fk_cr_receta
+    FOREIGN KEY (receta_id) REFERENCES recetas(id)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_cr_comprador
+    FOREIGN KEY (comprador_id) REFERENCES usuarios(id)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- TRIGGERS (compatibles con XAMPP/MariaDB)
+-- ============================================================
+
+-- 1) Generar slug si viene vacío al crear receta
+DROP TRIGGER IF EXISTS trg_recetas_slug_default;
+DELIMITER $$
+CREATE TRIGGER trg_recetas_slug_default
+BEFORE INSERT ON recetas
+FOR EACH ROW
+BEGIN
+  IF NEW.slug IS NULL OR CHAR_LENGTH(TRIM(NEW.slug)) = 0 THEN
+    SET NEW.slug = CONCAT(
+      LOWER(REPLACE(REPLACE(REPLACE(NEW.titulo, ' ', '-'), '_', '-'), '--','-')),
+      '-', LPAD(FLOOR(RAND()*1000000), 6, '0')
+    );
+  END IF;
+END$$
+DELIMITER ;
+
+-- 2) Evitar compras de recetas gratuitas y fijar amount_mxn al precio vigente
+DROP TRIGGER IF EXISTS trg_compra_receta_no_gratis;
+DELIMITER $$
+CREATE TRIGGER trg_compra_receta_no_gratis
+BEFORE INSERT ON compras_receta
+FOR EACH ROW
+BEGIN
+  DECLARE v_precio DECIMAL(10,2);
+  SELECT precio_mxn INTO v_precio FROM recetas WHERE id = NEW.receta_id;
+  IF v_precio IS NULL OR v_precio <= 0 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'No se puede comprar una receta gratuita.';
+  END IF;
+  SET NEW.amount_mxn = v_precio;
+END$$
+DELIMITER ;
+
+-- 3) Validar que rating esté entre 1 y 5 (INSERT y UPDATE)
+DROP TRIGGER IF EXISTS trg_valoraciones_rating_bi;
+DELIMITER $$
+CREATE TRIGGER trg_valoraciones_rating_bi
+BEFORE INSERT ON valoraciones
+FOR EACH ROW
+BEGIN
+  IF NEW.rating < 1 OR NEW.rating > 5 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'El rating debe estar entre 1 y 5.';
+  END IF;
+END$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS trg_valoraciones_rating_bu;
+DELIMITER $$
+CREATE TRIGGER trg_valoraciones_rating_bu
+BEFORE UPDATE ON valoraciones
+FOR EACH ROW
+BEGIN
+  IF NEW.rating < 1 OR NEW.rating > 5 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'El rating debe estar entre 1 y 5.';
+  END IF;
+END$$
+DELIMITER ;
+
+-- ============================================================
+-- VISTAS (opcionales, útiles para la API)
+-- ============================================================
+
+-- Vista: recetas públicas (oculta privadas)
+CREATE OR REPLACE VIEW vw_recetas_publicas AS
+SELECT
+  r.id,
+  r.titulo,
+  r.slug,
+  r.descripcion,
+  r.tiempo_preparacion_min,
+  r.porciones,
+  r.precio_mxn,
+  r.visibilidad,
+  r.publicado,
+  r.creado_en,
+  u.id     AS autor_id,
+  u.nombre AS autor_nombre
+FROM recetas r
+JOIN usuarios u ON u.id = r.autor_id
+WHERE r.publicado = 1 AND r.visibilidad = 'publica';
+
+-- Vista: promedio de rating por receta
+CREATE OR REPLACE VIEW vw_rating_recetas AS
+SELECT
+  r.id AS receta_id,
+  r.titulo,
+  AVG(v.rating) AS rating_promedio,
+  COUNT(v.id)   AS total_valoraciones
+FROM recetas r
+LEFT JOIN valoraciones v ON v.receta_id = r.id
+GROUP BY r.id, r.titulo;
