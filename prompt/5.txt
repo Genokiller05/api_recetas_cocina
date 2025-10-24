@@ -1,0 +1,49 @@
+{
+    "errors": [
+        {
+            "type": "field",
+            "msg": "El username es obligatorio.",
+            "path": "username",
+            "location": "body"
+        },
+        {
+            "type": "field",
+            "msg": "El email es obligatorio.",
+            "path": "email",
+            "location": "body"
+        },
+        {
+            "type": "field",
+            "msg": "Debe ser un email válido.",
+            "path": "email",
+            "location": "body"
+        },
+        {
+            "type": "field",
+            "msg": "WHERE parameter \"email\" has invalid \"undefined\" value",
+            "path": "email",
+            "location": "body"
+        },
+        {
+            "type": "field",
+            "msg": "La contraseña es obligatoria.",
+            "path": "password",
+            "location": "body"
+        },
+        {
+            "type": "field",
+            "msg": "La contraseña debe tener al menos 6 caracteres.",
+            "path": "password",
+            "location": "body"
+        }
+    ]
+}
+
+Peticion que estoy usando
+
+{
+  "nombre": "Yael",
+  "username": "Yael22",
+  "email": "yael@gmail.com",
+  "password": "123456"
+}
