@@ -1,0 +1,33 @@
+### 8.1.2 Funciones principales de JWT
+
+Las funciones principales en la biblioteca **`jsonwebtoken`** para la generación y verificación de JWT son **`sign`** y **`verify`**. Aquí te explico cómo se componen cada una de ellas:
+
+1. La función **`sign`** se utiliza para generar un nuevo JWT firmado. Acepta tres parámetros: el payload (carga útil) que deseas incluir en el JWT, una clave secreta para firmar el token y opcionalmente opciones adicionales. Su estructura general es la siguiente:
+    
+    ```jsx
+    jwt.sign(payload, secretOrPrivateKey, [options, callback])
+    ```
+    
+- **`payload`**: Es un objeto JSON que contiene la información que deseas transmitir de manera segura en el JWT.
+- **`secretOrPrivateKey`**: Es la clave secreta compartida o la clave privada utilizada para firmar el token. Puede ser una cadena de caracteres o una clave RSA privada.
+- **`options`** (opcional): Son opciones adicionales que se pueden especificar, como el algoritmo de firma, el tiempo de expiración, el emisor, etc.
+- **`callback`**: Es una función opcional que se puede utilizar en lugar de retornar una promesa. El callback se ejecutará una vez que el JWT se haya generado.
+
+La función **`sign`** retorna una cadena que representa el JWT firmado.
+
+1. La función **`verify`** se utiliza para verificar la validez y autenticidad de un JWT. Acepta tres parámetros: el JWT que deseas verificar, la clave secreta o clave pública correspondiente y opcionalmente opciones adicionales. Su estructura general es la siguiente:
+    
+    ```
+    jwt.verify(token, secretOrPublicKey, [options, callback])
+    ```
+    
+    - **`token`**: Es la cadena del JWT que se va a verificar.
+    - **`secretOrPublicKey`**: Es la clave secreta compartida o la clave pública utilizada para verificar la firma del token. Puede ser una cadena de caracteres o una clave RSA pública.
+    - **`options`** (opcional): Son opciones adicionales que se pueden especificar, como el algoritmo de firma, la audiencia, el emisor, etc.
+    - **`callback`**: Es una función opcional que se puede utilizar en lugar de retornar una promesa. El callback se ejecutará una vez que se haya verificado el JWT.
+
+La función **`verify`** retorna el payload (carga útil) del JWT si la firma es válida y no ha expirado. Si la firma es inválida o el JWT ha expirado, se generará una excepción.
+
+Es importante tener en cuenta que las opciones disponibles pueden variar dependiendo de la versión de la biblioteca **`jsonwebtoken`** que estés utilizando. Te recomiendo consultar la documentación oficial para conocer las opciones específicas y su uso adecuado.
+
+En resumen, la función **`sign`** se utiliza para generar un nuevo JWT firmado con un payload específico, mientras que la función **`verify`** se utiliza para verificar la validez de un JWT existente y obtener su carga útil si es válido. Ambas funciones son fundamentales para trabajar con JWT y asegurar la autenticidad y validez de los tokens utilizados en una aplicación.

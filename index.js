@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -22,6 +23,15 @@ const swaggerOptions = {
             },
             servers: ['http://localhost:3000']
         },
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT'
+                }
+            }
+        }
     },
     apis: ['./routes/*.js'], // Rutas donde swagger-jsdoc buscará los comentarios JSDoc
 };
@@ -44,6 +54,7 @@ const tagRoutes = require('./routes/tagroutes');
 const valoracionRoutes = require('./routes/valoracionroutes');
 const visitaRoutes = require('./routes/visitaroutes');
 const compraRecetaRoutes = require('./routes/comprarecetaroutes');
+const authRoutes = require('./routes/authroutes');
 
 app.use('/usuarios', usuarioRoutes);
 app.use('/categorias', categoriaRoutes);
@@ -54,6 +65,7 @@ app.use('/tags', tagRoutes);
 app.use('/valoraciones', valoracionRoutes);
 app.use('/visitas', visitaRoutes);
 app.use('/compras-recetas', compraRecetaRoutes);
+app.use('/api/auth', authRoutes);
 
 // Conexión a la base de datos
 db.authenticate()

@@ -25,7 +25,9 @@ const RecetaController = {
 
   async create(req, res) {
     try {
-      const receta = await Receta.create(req.body);
+      // Asignar el autor_id desde el usuario autenticado en el token
+      const recetaData = { ...req.body, autor_id: req.user.id };
+      const receta = await Receta.create(recetaData);
       res.status(201).send(receta);
     } catch (error) {
       res.status(400).send({ message: 'Error creating receta', error });
@@ -35,12 +37,17 @@ const RecetaController = {
   async update(req, res) {
     try {
       const receta = await Receta.findByPk(req.params.id);
-      if (receta) {
-        await receta.update(req.body);
-        res.send(receta);
-      } else {
-        res.status(404).send({ message: 'Receta not found' });
+      if (!receta) {
+        return res.status(404).send({ message: 'Receta not found' });
       }
+
+      // Verificar que el usuario es el autor de la receta
+      if (receta.autor_id !== req.user.id) {
+        return res.status(403).send({ message: 'Acción no autorizada. No eres el autor de esta receta.' });
+      }
+
+      await receta.update(req.body);
+      res.send(receta);
     } catch (error) {
       res.status(400).send({ message: 'Error updating receta', error });
     }
@@ -49,12 +56,17 @@ const RecetaController = {
   async destroy(req, res) {
     try {
       const receta = await Receta.findByPk(req.params.id);
-      if (receta) {
-        await receta.destroy();
-        res.status(204).send();
-      } else {
-        res.status(404).send({ message: 'Receta not found' });
+      if (!receta) {
+        return res.status(404).send({ message: 'Receta not found' });
       }
+
+      // Verificar que el usuario es el autor de la receta
+      if (receta.autor_id !== req.user.id) {
+        return res.status(403).send({ message: 'Acción no autorizada. No eres el autor de esta receta.' });
+      }
+
+      await receta.destroy();
+      res.status(204).send();
     } catch (error) {
       res.status(500).send({ message: 'Error deleting receta', error });
     }

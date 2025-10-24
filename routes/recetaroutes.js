@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const RecetaController = require('../controllers/recetacontroller');
 const { validatorRecetaCreate, validatorRecetaUpdate } = require('../validators/recetavalidator');
+const { protect } = require('../middleware/authMiddleware');
 
 /**
  * @swagger
@@ -90,6 +91,8 @@ const { validatorRecetaCreate, validatorRecetaUpdate } = require('../validators/
  *   post:
  *     summary: Crea una nueva receta
  *     tags: [Recetas]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -105,6 +108,8 @@ const { validatorRecetaCreate, validatorRecetaUpdate } = require('../validators/
  *               $ref: '#/components/schemas/Receta'
  *       400:
  *         description: Datos de entrada inválidos.
+ *       401:
+ *         description: No autorizado.
  *       500:
  *         description: Error del servidor.
  * /recetas/{id}:
@@ -132,6 +137,8 @@ const { validatorRecetaCreate, validatorRecetaUpdate } = require('../validators/
  *   put:
  *     summary: Actualiza una receta existente
  *     tags: [Recetas]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -154,6 +161,10 @@ const { validatorRecetaCreate, validatorRecetaUpdate } = require('../validators/
  *               $ref: '#/components/schemas/Receta'
  *       400:
  *         description: Datos de entrada inválidos.
+ *       401:
+ *         description: No autorizado.
+ *       403:
+ *         description: Acción no autorizada.
  *       404:
  *         description: Receta no encontrada.
  *       500:
@@ -161,6 +172,8 @@ const { validatorRecetaCreate, validatorRecetaUpdate } = require('../validators/
  *   delete:
  *     summary: Elimina una receta
  *     tags: [Recetas]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -171,6 +184,10 @@ const { validatorRecetaCreate, validatorRecetaUpdate } = require('../validators/
  *     responses:
  *       204:
  *         description: Receta eliminada exitosamente.
+ *       401:
+ *         description: No autorizado.
+ *       403:
+ *         description: Acción no autorizada.
  *       404:
  *         description: Receta no encontrada.
  *       500:
@@ -179,9 +196,9 @@ const { validatorRecetaCreate, validatorRecetaUpdate } = require('../validators/
 
 router.get('/', RecetaController.get);
 router.get('/:id', RecetaController.getById);
-router.post('/', validatorRecetaCreate, RecetaController.create);
-router.put('/:id', validatorRecetaUpdate, RecetaController.update);
-router.delete('/:id', RecetaController.destroy);
+router.post('/', protect, validatorRecetaCreate, RecetaController.create);
+router.put('/:id', protect, validatorRecetaUpdate, RecetaController.update);
+router.delete('/:id', protect, RecetaController.destroy);
 
 const pasoRoutes = require('./pasoroutes');
 

@@ -1,15 +1,58 @@
-D:\project\ProyectoApiRecetas\api_recetas_cocina\node_modules\sequelize\lib\associations\mixin.js:63
-      throw new Error(`${source.name}.${_.lowerFirst(Type.name)} called with something that's not a subclass of Sequelize.Model`);
-      ^
+La autenticación y autorización son dos aspectos fundamentales en el desarrollo de una API y juegan un papel clave en la seguridad y protección de los recursos y datos que se exponen a través de ella. Aquí te explico brevemente la importancia de cada uno:
 
-Error: Receta.belongsTo called with something that's not a subclass of Sequelize.Model
-    at Receta.<anonymous> (D:\project\ProyectoApiRecetas\api_recetas_cocina\node_modules\sequelize\lib\associations\mixin.js:63:13)
-    at Object.<anonymous> (D:\project\ProyectoApiRecetas\api_recetas_cocina\models\recetamodel.js:52:8)
-    at Module._compile (node:internal/modules/cjs/loader:1706:14)
-    at Object..js (node:internal/modules/cjs/loader:1839:10)
-    at Module.load (node:internal/modules/cjs/loader:1441:32)
-    at Function._load (node:internal/modules/cjs/loader:1263:12)
-    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
-    at Module.require (node:internal/modules/cjs/loader:1463:12)
-    at require (node:internal/modules/helpers:147:16)
+1. `Autenticación`: La autenticación se refiere al proceso de verificar la identidad de un usuario o una aplicación antes de permitirles el acceso a la API. Permite asegurarse de que solo las entidades autorizadas puedan utilizar los servicios proporcionados por la API. Al implementar un mecanismo de autenticación adecuado, se evita que usuarios no autorizados puedan acceder a recursos sensibles o realizar acciones no permitidas. Ejemplos comunes de métodos de autenticación incluyen el uso de tokens de acceso, claves de API, nombres de usuario y contraseñas, certificados digitales, etc.
+2. `Autorización`: Una vez que un usuario o una aplicación ha sido autenticado con éxito, la autorización determina qué acciones y recursos específicos están permitidos para ese usuario o aplicación en particular. La autorización se ocupa de establecer los niveles de acceso y los permisos necesarios para realizar determinadas operaciones. Por ejemplo, una API puede definir diferentes roles (administrador, usuario regular, invitado) y asignar permisos a cada uno de ellos. Esto permite controlar quién puede leer, escribir, modificar o eliminar datos en la API. La autorización adecuada ayuda a garantizar la integridad de los datos y la protección de la información confidencial.
+
+En conjunto, la autenticación y la autorización son esenciales para proteger los recursos y datos expuestos a través de una API. Al implementar adecuadamente estos mecanismos de seguridad, se establece una capa de protección que reduce el riesgo de accesos no autorizados, manipulación indebida de datos y otros ataques maliciosos. Además, proporcionan una forma de rastrear y auditar las acciones realizadas en la API, lo que es fundamental para mantener la integridad y la confianza en el sistema.
+
+## 8.1 JSON Web Token
+
+JSON Web Token (JWT) es un estándar abierto (RFC 7519) que define un formato compacto y seguro para transmitir información entre dos partes de forma confiable. Un JWT es un objeto JSON que consta de tres partes separadas por puntos y codificadas en Base64 URL:
+
+1. `Encabezado (Header):` Contiene información sobre el tipo de token y el algoritmo de firma utilizado. Por ejemplo:
+    
+    ```json
+    jsonCopy code
+    {
+      "alg": "HS256",
+      "typ": "JWT"
+    }
+    ```
+    
+    En este caso, se utiliza el algoritmo HMAC-SHA256 (HS256) para firmar el token.
+
+    Carga útil (Payload): Es donde se incluye la información que se desea transmitir de manera segura. Puede contener cualquier dato JSON válido. Algunos de los campos comunes en la carga útil incluyen el identificador del usuario, roles, permisos u otra información relevante. Por ejemplo:
+{
+  "sub": "1234567890",
+  "name": "John Doe",
+  "admin": true
+}
+​
+Vencimiento (Expiration): Nos sirve para definir una fecha y hora en la cual el token deja de ser válido. Esto brinda un mecanismo para controlar la duración de la sesión y restringir el tiempo durante el cual un token puede ser utilizado para acceder a recursos protegidos.
+El vencimiento de un JWT se especifica en la carga útil (payload) utilizando el campo "exp" (expiration time) y se representa como un valor numérico llamado "Unix timestamp". Este valor representa la cantidad de segundos transcurridos desde el 1 de enero de 1970 a las 00:00:00 UTC (conocido como "Epoch time").
+Por ejemplo, en la carga útil de un JWT, se puede incluir el campo "exp" de la siguiente manera:
+{
+  "sub": "1234567890",
+  "name": "John Doe",
+  "exp": 1678425600
+}
+
+En este caso, el valor "1678425600" representa una fecha y hora específica en formato Unix timestamp. Cuando un receptor del token recibe este JWT, puede verificar si el token está dentro de su período de validez comparando el valor "exp" con la fecha y hora actual.
+
+4. `Firma (Signature):` Se utiliza para verificar la integridad del token y asegurar que no ha sido manipulado. La firma se crea combinando el encabezado codificado en Base64 URL, la carga útil codificada en Base64 URL y una clave secreta compartida. La firma se genera utilizando el algoritmo especificado en el encabezado. Por ejemplo:
+    
+    ```
+    scssCopy code
+    HMACSHA256(
+      base64UrlEncode(header) + "." +
+      base64UrlEncode(payload),
+      secret)
+    ```
+    
+    Donde **`secret`** es una clave secreta que solo conocen el emisor y el receptor del token.
+    
+    El JWT se envía a través de las solicitudes HTTP en los encabezados de autorización, generalmente en el formato **`Bearer <token>`**. El receptor del token puede verificar su validez utilizando la clave secreta compartida y comparando la firma calculada con la firma proporcionada en el token recibido.
+
+    Los JWT son ampliamente utilizados en aplicaciones web y APIs como mecanismo de autenticación y autorización. Al ser autocontenidos y firmados, no es necesario almacenar el estado del usuario en el servidor, lo que los hace escalables y eficientes. Además, los JWT pueden incluir información adicional en la carga útil, lo que permite transmitir datos relevantes junto con la autenticación.
+
+Sin embargo, es importante tener en cuenta que los JWT no son cifrados, por lo que no se deben incluir datos sensibles en la carga útil. Además, se deben tomar precauciones para proteger la clave secreta utilizada para firmar los tokens y evitar que caigan en manos equivocadas.

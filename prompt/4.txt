@@ -1,0 +1,211 @@
+## 8.3 Protección de nuestros Endpoints con JWT
+
+La protección de rutas en una API se refiere a la implementación de medidas de seguridad para controlar y restringir el acceso a ciertos endpoints o recursos de la API. Esto se hace para garantizar que solo los usuarios autorizados puedan acceder y realizar ciertas operaciones en esos endpoints.
+
+La protección de rutas se utiliza para prevenir accesos no autorizados y garantizar la confidencialidad, integridad y disponibilidad de los datos y funcionalidades expuestos a través de la API. Al implementar la protección de rutas, se pueden aplicar diferentes técnicas y estrategias de seguridad, como la autenticación y la autorización.
+
+Ahora que ya sabemos que es la protección de rutas, vamos a ver como protegerlas haciendo uso de JWT con el token que generamos en el submódulo anterior.
+
+**Paso 1:** En la raíz de nuestro proyecto, creamos una carpeta que se llame `middlewares`
+
+**Paso 2:** Dentro de la carpeta que acabamos de crear, creamos un archivo llamado `jwt.js`, en este implementaremos todos los middlewares correspondientes a JWT para la protección de nuestras rutas
+
+**Paso 3:** Dentro del archivo pegamos el siguiente código:
+
+const jwt = require('jsonwebtoken');
+
+const authenticateAdmin = (req, res, next) => {
+    const authorization_header = req.headers.authorization;
+    const token = authorization_header.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).send({ message: 'No se proporcionó un token' });
+    }
+
+    jwt.verify(token, 'mi_llave_secreta', (err, decoded) => {
+        if (err) {
+            return res.status(403).send({ message: 'Sin autorización' });
+        }
+        if (decoded.usuario.perfil_id === 1) {
+            next();
+        }
+        else {
+            return res.status(403).send({ message: 'Sin autorización' });
+        }
+
+    });
+}
+
+
+module.exports = {
+    authenticateAdmin
+};
+
+La función llamada **`authenticateAdmin`** es un middleware de autenticación que nos sirve para verificar si un usuario tiene permisos de administrador.
+
+1. Se define la función **`authenticateAdmin`** con tres parámetros: **`req`**, **`res`** y **`next`**. Estos parámetros representan el objeto de solicitud (request), objeto de respuesta (response) y una función de siguiente middleware, respectivamente.
+2. Se obtiene el encabezado de autorización de la solicitud mediante **`req.headers.authorization`**. El encabezado de autorización suele contener un token de autenticación.
+3. **`const token = authorization_header && authorization_header.split(' ')[1];`** Esta línea utiliza el operador lógico **`&&`** para comprobar si **`authorization_header`** tiene un valor. Si **`authorization_header`** no es **`null`**, **`undefined`** o una cadena vacía, entonces se realiza la siguiente operación. Esto evita errores si el encabezado de autorización no está presente en la solicitud.
+    
+    Luego, se utiliza el método **`split(' ')`** para dividir el valor del encabezado de autorización en un array de cadenas, utilizando el espacio como separador. La función **`split`** divide una cadena en partes más pequeñas y devuelve un array con esas partes. En este caso, se asume que el token de autenticación está en la segunda posición del array resultante, por eso se accede al índice **`[1]`**.
+    
+    Por ejemplo, si **`authorization_header`** es **`"Bearer abcdefg123456"`**, el resultado de **`authorization_header.split(' ')`** será **`["Bearer", "abcdefg123456"]`**, y **`token`** tomará el valor **`"abcdefg123456"`**.
+
+    4. Se verifica si no se proporcionó ningún token. Si no hay un token, se envía una respuesta de estado 401 (no autorizado) con un mensaje indicando que no se proporcionó un token.
+5. Se utiliza **`jwt.verify`** para verificar la validez del token. Toma el token, una clave secreta ("mi_llave_secreta" en este caso) y una función de devolución de llamada como argumentos. Si hay un error al verificar el token, se envía una respuesta de estado 403 (prohibido) con un mensaje indicando que no hay autorización.
+6. Si el token se verifica correctamente, la función de devolución de llamada se ejecuta y recibe dos argumentos: **`err`** y **`decoded`**. **`err`** contiene información sobre cualquier error que ocurra durante la verificación, y **`decoded`** contiene la información decodificada del token.
+7. Se verifica si el perfil del usuario (contenido en **`decoded.usuario.perfil_id`**) es igual a 1. Si es así, se llama a **`next()`** para pasar la solicitud al siguiente middleware. Esto indica que el usuario tiene los permisos de administrador necesarios.
+8. Si el perfil del usuario no es igual a 1, se envía una respuesta de estado 403 (prohibido) con un mensaje indicando que no tiene autorización.
+
+Ahora crearemos un Middleware para verificar que el token es valido sin importar el tipo de perfil, nuestro archivo jwt.js debe quedar de la siguiente manera
+
+const jwt = require('jsonwebtoken');
+
+
+const authenticateAdmin = (req, res, next) => {
+    const authorization_header = req.headers.authorization;
+    const token = authorization_header && authorization_header.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).send({ message: 'No se proporcionó un token' });
+    }
+
+    jwt.verify(token, 'mi_llave_secreta', (err, decoded) => {
+        if (err) {
+            return res.status(403).send({ message: 'Sin autorización' });
+        }
+        if (decoded.usuario.perfil_id === 1) {
+            next();
+        }
+        else {
+            return res.status(403).send({ message: 'Sin autorización' });
+        }
+
+    });
+}
+
+const authenticateAny = (req, res, next) => {
+    const authorization_header = req.headers.authorization;
+    const token = authorization_header && authorization_header.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).send({ message: 'No se proporcionó un token' });
+    }
+
+    jwt.verify(token, 'mi_llave_secreta', (err, decoded) => {
+        if (err) {
+            return res.status(403).send({ message: 'Sin autorización' });
+        }
+        if (decoded) {
+            next();
+        }
+        else {
+            return res.status(403).send({ message: 'Sin autorización' });
+        }
+
+    });
+}
+
+
+module.exports = {
+    authenticateAdmin,
+    authenticateAny
+};
+
+**Paso 4:** Proteger las rutas donde consideremos que solo un administrador puede acceder y donde cualquier tipo de usuario pueda acceder
+
+CategoryRoute.js
+
+var express = require('express');
+
+const {get, getById, create, update, destroy}  = require('../controllers/CategoryController');
+const { validatorCategoryCreate, validatorCategoryUpdate } = require('../validators/CategoryValidator');
+const { authenticateAdmin } = require('../middlewares/jwt')
+
+
+const api = express.Router();
+
+api.get('/categorias', get);
+api.get('/categorias/:id', getById)
+api.post('/categorias', authenticateAdmin, validatorCategoryCreate, create)
+api.put('/categorias/:id', authenticateAdmin, validatorCategoryUpdate, update)
+api.delete('/categorias/:id', authenticateAdmin, destroy)
+
+
+module.exports = api;
+
+NewRoute.js
+
+const express = require('express');
+
+const { get, getById, create, update, destroy } = require('../controllers/NewController');
+const { validatorNewCreate, validatorNewUpdate } = require('../validators/NewValidator');
+const { authenticateAdmin, authenticateAny } = require('../middlewares/jwt')
+
+
+
+const api = express.Router();
+
+api.get('/noticias', get);
+api.get('/noticias/:id', getById)
+api.post('/noticias', authenticateAny, validatorNewCreate, create)
+api.put('/noticias/:id', authenticateAny, validatorNewUpdate, update)
+api.delete('/noticias/:id', authenticateAny,  destroy)
+
+module.exports = api;
+
+ProfileRoute.js
+
+var express = require('express');
+
+const {get, getById, }  = require('../controllers/ProfileController');
+const { authenticateAdmin } = require('../middlewares/jwt')
+
+
+const api = express.Router();
+
+api.get('/perfiles', get);
+api.get('/perfiles/:id', getById)
+
+
+module.exports = api;
+
+StateRoute.js
+
+var express = require('express');
+
+
+const {get, getById, create, update, destroy}  = require('../controllers/StateController');
+const {validatorStateRequire, validatorStateOptional} = require('../validators/StateValidator')
+const { authenticateAdmin } = require('../middlewares/jwt')
+
+const api = express.Router();
+
+api.get('/estados', get);
+api.get('/estados/:id', getById)
+api.post('/estados', authenticateAdmin, validatorStateRequire, create)
+api.put('/estados/:id', authenticateAdmin, validatorStateOptional, update)
+api.delete('/estados/:id', authenticateAdmin, destroy)
+
+
+module.exports = api;
+
+UserRoute.js
+
+var express = require('express');
+
+const { get, getById, create, update, destroy } = require('../controllers/UserController');
+const { validatorUserCreate, validatorUserUpdate } = require('../validators/UserValidator');
+const { authenticateAdmin } = require('../middlewares/jwt')
+
+
+const api = express.Router();
+
+api.get('/usuarios', authenticateAdmin, get);
+api.get('/usuarios/:id', authenticateAdmin, getById)
+api.post('/usuarios', authenticateAdmin, validatorUserCreate, create)
+api.put('/usuarios/:id',authenticateAdmin, validatorUserUpdate, update)
+api.delete('/usuarios/:id', authenticateAdmin, destroy)
+
+
+module.exports = api;

@@ -1,0 +1,216 @@
+## 8.2 Implementando JWT en nuestra API
+
+**Paso 1:** Instalar JSON Web Token
+
+```powershell
+npm install jsonwebtoken
+```
+
+**Paso 2:** Antes de proceder con las implementaciones de JWT es importante crear un servicio de login y registro para nuestra API
+
+***Actividad: Crea un controlador que permita logear (regresar un código de estado 201 con un mensaje que diga “Login con éxito” cuando las credenciales son correctas correo y contraseña y un mensaje de “Sin autorización” con el código de estado 401 en dado caso que no lo sean)  y un método que permita registrar a un usuario dentro de nuestra API (el metodo no debe solicitar el perfil_id si no que directamente nosotros le mandaremos el 2 ya que será nuestro endpoint abierto para los contribuidores), el archivo se debe llamar `AuthController.js` así como su archivo de enrutamiento `AuthRoute.js`. Para poder realizar este ejercicio aplica tus conocimientos en consultas con Sequelize, así como las validaciones correspondientes en un archivo llamado `AuthValidator.js` , ten en cuenta los endpoints para estos métodos definidos en el módulo 4.1***
+
+AuthController.js
+
+const { User } = require('../models/UserModel')
+const { validationResult } = require('express-validator');
+
+const login = (request, response) => {
+    const errors = validationResult(request);
+    if (!errors.isEmpty()) {
+        return response.status(422).json({ errors: errors.mapped() });
+    }
+    User.findOne({
+        where: {
+            correo: request.body.correo,
+            contraseña: request.body.contraseña,
+            activo: true
+        },
+    }).then(entitie => {
+            if (entitie) {
+                response.status(201).json({message: "Login con éxito"});
+            }
+            else {
+                response.status(401).json({message: "Sin autorización"});
+
+            }
+        })
+        .catch(err => {
+            response.status(500).send('Error al consultar el dato');
+        })
+}
+
+const register = (request, response) => {
+    const errors = validationResult(request);
+    if (!errors.isEmpty()) {
+        return response.status(422).json({ errors: errors.mapped() });
+    }
+    request.body.perfil_id = 2
+    request.body.status = true
+
+    User.create(request.body).then(
+        newEntitie => {
+            response.status(201).json(newEntitie)
+        }
+    )
+        .catch(err => {
+            response.status(500).send('Error al crear');
+        })
+}
+
+module.exports = {
+    login,
+    register,
+};
+
+AuthValidator.js
+
+const { check } = require('express-validator');
+const { User } = require('../models/UserModel');
+
+
+const validatorLogin = [
+    check('correo').notEmpty().withMessage('El campo correo es requerido')
+        .isEmail().withMessage('El campo correo debe ser un correo válido'),
+
+    check('contraseña').notEmpty().withMessage('El campo contraseña es requerido')
+]
+
+const validatorRegister = [
+    check('nombre').notEmpty().withMessage('El campo nombre es obligatorio')
+        .isString().withMessage('El campo nombre debe ser texto')
+        .isLength({ min: 2, max: 100 }).withMessage('El campo debe tener entre 2 y 100 caracteres'),
+
+    check('apellidos').notEmpty().withMessage('El campo apellidos es obligatorio')
+        .isString().withMessage('El campo apellidos debe ser texto')
+        .isLength({ min: 2, max: 100 }).withMessage('El campo apellidos debe tener entre 2 y 100 caracteres'),
+
+    check('nick').notEmpty().withMessage('El campo nick es obligatorio')
+        .isString().withMessage('El campo nick debe ser texto')
+        .isLength({ min: 2, max: 20 }).withMessage('El campo nick debe tener entre 2 y 20 caracteres'),
+
+    check('correo').notEmpty().withMessage('El campo correo es obligatorio')
+        .isEmail().withMessage('El campo correo debe ser un correo valido')
+        .isLength({ min: 2, max: 255 }).withMessage('El campo correo debe tener entre 2 y 255 caracteres')
+        .custom((value, { request }) => {
+            return User.findOne({ where: { correo: value } })
+                .then((user) => {
+                    if (user) {
+                        throw new Error('Ya existe un usuario con este correo ')
+                    }
+                })
+        }),
+
+    check('contraseña').notEmpty().withMessage('El campo contraseña es obligatorio')
+        .isString().withMessage('El campo contraseña debe ser texto')
+        .isLength({ min: 8, max: 255 }).withMessage('El campo correo debe tener entre 8 y 255 caracteres'),
+]
+
+module.exports = {
+    validatorLogin,
+    validatorRegister
+}
+
+AuthRoute.js
+var express = require('express');
+
+const { login, register, } = require('../controllers/AuthController');
+const { validatorLogin, validatorRegister } = require('../validators/AuthValidator');
+const api = express.Router();
+
+api.post('/auth/login', validatorLogin, login);
+api.post('/auth/registro/', validatorRegister, register)
+
+
+
+module.exports = api;
+
+app.js
+
+const express = require('express')
+const app = express();
+const PORT = 3000
+
+app.use(express.json());
+
+//Exportar Rutas
+const profile_routes = require('./routes/ProfileRoute');
+const state_routes = require('./routes/StateRoute');
+const category_routes = require('./routes/CategoryRoute');
+const new_routes = require('./routes/NewRoute');
+const user_routes = require('./routes/UserRoute');
+const auth_routes = require('./routes/AuthRoute')
+
+
+
+//Usar las rutas
+app.use('/api', profile_routes, state_routes, category_routes, new_routes, user_routes, auth_routes)
+
+app.listen(PORT, () => {
+    console.log('Servidor escuchando en el puerto ' + PORT);
+});
+
+module.exports = app;
+
+**Paso 3:** Una vez que hemos creado nuestro controlador de login y registro es momento de implementar JWT al momento de que un usuario se logea, para eso generaremos un token el cual se le devolverá en la respuesta de nuestra solicitud, teniendo el siguiente código.
+
+AuthController.js
+
+const { User } = require('../models/UserModel')
+const { validationResult } = require('express-validator');
+const jwt = require('jsonwebtoken');
+
+
+const login = (request, response) => {
+    const errors = validationResult(request);
+    if (!errors.isEmpty()) {
+        return response.status(422).json({ errors: errors.mapped() });
+    }
+    User.findOne({
+        where: {
+            correo: request.body.correo,
+            contraseña: request.body.contraseña,
+            activo: true
+        },
+        attributes: ['id', 'perfil_id', 'nombre', 'apellidos', 'nick']
+    }).then(usuario => {
+        if (usuario) {
+            const token = jwt.sign({ usuario }, 'mi_llave_secreta', { expiresIn: '24h' });
+            response.status(201).json({ message: "Login con éxito", token: token });
+        }
+        else {
+            response.status(401).json({ message: "Sin autorización" });
+
+        }
+    })
+        .catch(err => {
+            response.status(500).send('Error al consultar el dato');
+        })
+}
+
+
+const register = (request, response) => {
+    const errors = validationResult(request);
+    if (!errors.isEmpty()) {
+        return response.status(422).json({ errors: errors.mapped() });
+    }
+    request.body.perfil_id = 2
+    request.body.status = true
+
+    User.create(request.body).then(
+        newEntitie => {
+            response.status(201).json(newEntitie)
+        }
+    )
+        .catch(err => {
+            response.status(500).send('Error al crear');
+        })
+}
+
+
+
+
+module.exports = {
+    login,
+    register,
+};

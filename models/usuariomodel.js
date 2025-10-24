@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../db');
+const bcrypt = require('bcryptjs');
 
 const Usuario = sequelize.define('Usuario', {
   id: {
@@ -22,7 +23,7 @@ const Usuario = sequelize.define('Usuario', {
     unique: true
   },
   hash_password: {
-    type: DataTypes.CHAR(60),
+    type: DataTypes.STRING,
     allowNull: false
   },
   foto_url: {
@@ -33,7 +34,17 @@ const Usuario = sequelize.define('Usuario', {
   }
 }, {
   tableName: 'usuarios',
-  timestamps: false
+  timestamps: false,
+  hooks: {
+    beforeCreate: (usuario) => {
+      const salt = bcrypt.genSaltSync(10);
+      usuario.hash_password = bcrypt.hashSync(usuario.hash_password, salt);
+    }
+  }
 });
+
+Usuario.prototype.comparePassword = function(password) {
+  return bcrypt.compareSync(password, this.hash_password);
+};
 
 module.exports = Usuario;
