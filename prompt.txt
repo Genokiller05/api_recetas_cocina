@@ -1,0 +1,160 @@
+#### Ejemplo de controlador:
+
+const Cancelacion = require('../models/cancelacionmodel');
+
+const CancelacionController = {
+  async get(req, res) {
+    try {
+      const cancelaciones = await Cancelacion.findAll();
+      res.send(cancelaciones);
+    } catch (error) {
+      res.status(500).send({ message: 'Error retrieving cancelaciones', error });
+    }
+  },
+
+  async getById(req, res) {
+    try {
+      const cancelacion = await Cancelacion.findByPk(req.params.id);
+      if (cancelacion) {
+        res.send(cancelacion);
+      } else {
+        res.status(404).send({ message: 'Cancelacion not found' });
+      }
+    } catch (error) {
+      res.status(500).send({ message: 'Error retrieving cancelacion', error });
+    }
+  },
+
+  async create(req, res) {
+    try {
+      const cancelacion = await Cancelacion.create(req.body);
+      res.status(201).send(cancelacion);
+    } catch (error) {
+      res.status(400).send({ message: 'Error creating cancelacion', error });
+    }
+  },
+
+  async update(req, res) {
+    try {
+      const cancelacion = await Cancelacion.findByPk(req.params.id);
+      if (cancelacion) {
+        await cancelacion.update(req.body);
+        res.send(cancelacion);
+      } else {
+        res.status(404).send({ message: 'Cancelacion not found' });
+      }
+    } catch (error) {
+      res.status(400).send({ message: 'Error updating cancelacion', error });
+    }
+  },
+
+  async destroy(req, res) {
+    try {
+      const cancelacion = await Cancelacion.findByPk(req.params.id);
+      if (cancelacion) {
+        await cancelacion.destroy();
+        res.status(204).send();
+      } else {
+        res.status(404).send({ message: 'Cancelacion not found' });
+      }
+    } catch (error) {
+      res.status(500).send({ message: 'Error deleting cancelacion', error });
+    }
+  }
+};
+
+module.exports = CancelacionController;
+
+Ejemplo de models 
+const Cancelacion = require('../models/cancelacionmodel');
+
+const CancelacionController = {
+  async get(req, res) {
+    try {
+      const cancelaciones = await Cancelacion.findAll();
+      res.send(cancelaciones);
+    } catch (error) {
+      res.status(500).send({ message: 'Error retrieving cancelaciones', error });
+    }
+  },
+
+  async getById(req, res) {
+    try {
+      const cancelacion = await Cancelacion.findByPk(req.params.id);
+      if (cancelacion) {
+        res.send(cancelacion);
+      } else {
+        res.status(404).send({ message: 'Cancelacion not found' });
+      }
+    } catch (error) {
+      res.status(500).send({ message: 'Error retrieving cancelacion', error });
+    }
+  },
+
+  async create(req, res) {
+    try {
+      const cancelacion = await Cancelacion.create(req.body);
+      res.status(201).send(cancelacion);
+    } catch (error) {
+      res.status(400).send({ message: 'Error creating cancelacion', error });
+    }
+  },
+
+  async update(req, res) {
+    try {
+      const cancelacion = await Cancelacion.findByPk(req.params.id);
+      if (cancelacion) {
+        await cancelacion.update(req.body);
+        res.send(cancelacion);
+      } else {
+        res.status(404).send({ message: 'Cancelacion not found' });
+      }
+    } catch (error) {
+      res.status(400).send({ message: 'Error updating cancelacion', error });
+    }
+  },
+
+  async destroy(req, res) {
+    try {
+      const cancelacion = await Cancelacion.findByPk(req.params.id);
+      if (cancelacion) {
+        await cancelacion.destroy();
+        res.status(204).send();
+      } else {
+        res.status(404).send({ message: 'Cancelacion not found' });
+      }
+    } catch (error) {
+      res.status(500).send({ message: 'Error deleting cancelacion', error });
+    }
+  }
+};
+
+module.exports = CancelacionController;
+
+###Ejemplo de routes
+const express = require('express');
+const router = express.Router();
+const CancelacionController = require('../controllers/cancelacioncontroller');
+const { validatorCancelacionCreate, validatorCancelacionUpdate } = require('../validators/cancelacionvalidator');
+
+router.get('/cancelaciones', CancelacionController.get);
+router.get('/cancelaciones/:id', CancelacionController.getById);
+router.post('/cancelaciones', validatorCancelacionCreate, CancelacionController.create);
+router.put('/cancelaciones/:id', validatorCancelacionUpdate, CancelacionController.update);
+router.delete('/cancelaciones/:id', CancelacionController.destroy);
+
+module.exports = router;
+
+###ejemplo de validators:
+const express = require('express');
+const router = express.Router();
+const CancelacionController = require('../controllers/cancelacioncontroller');
+const { validatorCancelacionCreate, validatorCancelacionUpdate } = require('../validators/cancelacionvalidator');
+
+router.get('/cancelaciones', CancelacionController.get);
+router.get('/cancelaciones/:id', CancelacionController.getById);
+router.post('/cancelaciones', validatorCancelacionCreate, CancelacionController.create);
+router.put('/cancelaciones/:id', validatorCancelacionUpdate, CancelacionController.update);
+router.delete('/cancelaciones/:id', CancelacionController.destroy);
+
+module.exports = router;
